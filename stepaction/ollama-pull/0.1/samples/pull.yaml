@@ -1,0 +1,31 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  generateName: ollama-pull-sample-
+spec:
+  taskSpec:
+    workspaces:
+      - name: ollama-cache
+    sidecars:
+      - name: ollama-server
+        image: docker.io/ollama/ollama:latest
+        env:
+          - name: OLLAMA_HOST
+            value: "0.0.0.0:11434"
+        volumeMounts:
+          - name: $(workspaces.ollama-cache.volume)
+            mountPath: /root/.ollama
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 11434
+    steps:
+      - name: pull
+        ref:
+          name: ollama-pull
+        params:
+          - name: model
+            value: tinyllama
+  workspaces:
+    - name: ollama-cache
+      emptyDir: {}

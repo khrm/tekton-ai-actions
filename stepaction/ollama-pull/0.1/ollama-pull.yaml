@@ -1,0 +1,65 @@
+apiVersion: tekton.dev/v1alpha1
+kind: StepAction
+metadata:
+  name: ollama-pull
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/categories: AI
+    tekton.dev/displayName: "Ollama Pull Model"
+spec:
+  description: >-
+    A reusable StepAction to pull a model into an Ollama server.
+    It waits for the server to be ready and then triggers the pull.
+
+  params:
+    - name: model
+      description: The model name to pull (e.g., tinyllama).
+      type: string
+    - name: ollama-host
+      description: The URL of the Ollama server.
+      type: string
+      default: "http://localhost:11434"
+
+  image: alpine:latest
+  
+  env:
+    - name: HOST
+      value: $(params.ollama-host)
+    - name: MODEL
+      value: $(params.model)
+
+  script: |
+    #!/bin/sh
+    set -e
+
+    # Install dependencies
+    apk add --no-cache curl
+
+    # 1. Wait for Server
+    echo "Waiting for Ollama at $HOST..."
+    until curl -s "$HOST/" > /dev/null; do
+      sleep 1
+    done
+    echo "Server ready."
+
+    # 2. Pull Model
+    echo "Pulling model $MODEL..."
+    MAX_RETRIES=3
+    for i in $(seq 1 $MAX_RETRIES); do
+        # Stream=false to wait for completion and get final status
+        PULL_OUTPUT=$(curl -s -X POST "$HOST/api/pull" -d "{\"name\": \"$MODEL\", \"stream\": false}")
+        echo "Pull attempt $i response: $PULL_OUTPUT"
+        
+        if echo "$PULL_OUTPUT" | grep -q "success"; then
+            echo "Model pulled successfully."
+            exit 0
+        fi
+        
+        echo "Pull failed or incomplete."
+        if [ "$i" -eq "$MAX_RETRIES" ]; then
+            echo "Max retries reached. Exiting."
+            exit 1
+        fi
+        sleep 2
+    done

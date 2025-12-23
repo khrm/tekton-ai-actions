@@ -1,0 +1,71 @@
+apiVersion: tekton.dev/v1alpha1
+kind: StepAction
+metadata:
+  name: ollama-generate
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/categories: AI
+    tekton.dev/displayName: "Ollama Generate"
+spec:
+  description: >-
+    A reusable StepAction to generate a response from an Ollama server.
+    It assumes the model is already pulled and available.
+
+  params:
+    - name: model
+      description: The model name (e.g., tinyllama).
+      type: string
+    - name: prompt
+      description: The prompt to send.
+      type: string
+    - name: ollama-host
+      description: The URL of the Ollama server.
+      type: string
+      default: "http://localhost:11434"
+
+  results:
+    - name: response
+      description: The text response from the model.
+
+  image: alpine:latest
+  
+  env:
+    - name: HOST
+      value: $(params.ollama-host)
+    - name: MODEL
+      value: $(params.model)
+    - name: PROMPT
+      value: $(params.prompt)
+    - name: RESULT_PATH
+      value: $(step.results.response.path)
+
+  script: |
+    #!/bin/sh
+    set -e
+
+    # Install dependencies
+    apk add --no-cache curl jq
+
+    # Generate
+    echo "Generating response from $MODEL at $HOST..."
+    
+    # We construct the JSON using jq to handle escaping perfectly
+    JSON=$(jq -n --arg m "$MODEL" --arg p "$PROMPT" '{model: $m, prompt: $p, stream: false}')
+
+    RESPONSE_JSON=$(curl -s -X POST "$HOST/api/generate" -d "$JSON")
+    
+    # Extract response field
+    RESPONSE_TEXT=$(echo "$RESPONSE_JSON" | jq -r .response)
+    
+    if [ -z "$RESPONSE_TEXT" ] || [ "$RESPONSE_TEXT" = "null" ]; then
+        echo "Failed to get response: $RESPONSE_JSON"
+        exit 1
+    fi
+
+    echo "Content length: ${#RESPONSE_TEXT}"
+    echo -n "$RESPONSE_TEXT" > "$RESULT_PATH"
+    echo "Written to $RESULT_PATH"
+    ls -l "$RESULT_PATH"
+    cat "$RESULT_PATH"
+    echo "Response received and written to result."

@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  generateName: ollama-run-sample-
+spec:
+  taskRef:
+    name: ollama-run
+  params:
+    - name: model
+      value: tinyllama
+    - name: prompt
+      value: "Why is the sky blue?"
+  workspaces:
+    - name: ollama-cache
+      emptyDir: {}

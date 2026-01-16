@@ -5,8 +5,11 @@ metadata:
   labels:
     app.kubernetes.io/version: "0.1"
   annotations:
+    tekton.dev/pipelines.minVersion: "0.54.0"
     tekton.dev/categories: AI
+    tekton.dev/tags: ai, llm, ollama, stepaction
     tekton.dev/displayName: "Ollama Pull Model"
+    tekton.dev/platforms: "linux/amd64"
 spec:
   description: >-
     A reusable StepAction to pull a model into an Ollama server.

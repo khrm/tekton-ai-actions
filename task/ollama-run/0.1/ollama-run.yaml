@@ -3,12 +3,13 @@ kind: Task
 metadata:
   name: ollama-run
   labels:
-    app.kubernetes.io/version: "0.2"
+    app.kubernetes.io/version: "0.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.54.0"
     tekton.dev/categories: AI
     tekton.dev/tags: ai, llm, ollama
     tekton.dev/displayName: "Ollama Run"
+    tekton.dev/platforms: "linux/amd64"
 spec:
   description: >-
     Run an Ollama Large Language Model (LLM) using reusable StepActions.
